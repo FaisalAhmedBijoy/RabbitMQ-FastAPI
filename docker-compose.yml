@@ -1,0 +1,159 @@
+version: '3.8'
+
+services:
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - image_processing_network
+
+  # FastAPI Application
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: fastapi_api
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      DEBUG: "True"
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+      - ./app:/app/app
+    networks:
+      - image_processing_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Resize Worker 1
+  resize_worker_1:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: resize_worker_1
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      LOG_LEVEL: INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - image_processing_network
+    command: python -m app.workers.resize_worker
+
+  # Resize Worker 2 (for demonstrating competing consumers)
+  resize_worker_2:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: resize_worker_2
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      LOG_LEVEL: INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - image_processing_network
+    command: python -m app.workers.resize_worker
+
+  # Thumbnail Worker
+  thumbnail_worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: thumbnail_worker
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      LOG_LEVEL: INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - image_processing_network
+    command: python -m app.workers.thumbnail_worker
+
+  # OCR Worker
+  ocr_worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: ocr_worker
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      LOG_LEVEL: INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - image_processing_network
+    command: python -m app.workers.ocr_worker
+
+  # AI Tagging Worker
+  ai_tagging_worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: ai_tagging_worker
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      LOG_LEVEL: INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - image_processing_network
+    command: python -m app.workers.ai_tagging_worker
+
+networks:
+  image_processing_network:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:
