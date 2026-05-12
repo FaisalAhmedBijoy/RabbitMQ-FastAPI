@@ -171,7 +171,7 @@ async def custom_endpoint():
 # Create app/workers/custom_worker.py
 
 from app.workers.base import BaseWorker
-from app.config import RABBITMQ_CONFIG
+from app.core.config import RABBITMQ_CONFIG
 
 class CustomWorker(BaseWorker):
     def __init__(self):
@@ -312,14 +312,14 @@ class MyWorker(BaseWorker):
 ### Task 2: Add Configuration Option
 
 ```python
-# In app/config.py
+# In app/core/config.py
 
 @dataclass
 class RabbitMQConfig:
     MY_NEW_SETTING: str = os.getenv("MY_NEW_SETTING", "default_value")
 
 # Use it
-from app.config import RABBITMQ_CONFIG
+from app.core.config import RABBITMQ_CONFIG
 value = RABBITMQ_CONFIG.MY_NEW_SETTING
 ```
 

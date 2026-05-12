@@ -76,9 +76,28 @@ class AppConfig:
 @dataclass
 class SecurityConfig:
     """Security Configuration"""
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+    SECRET_KEY: str = None
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    def __post_init__(self):
+        """Validate SECRET_KEY is set"""
+        self.SECRET_KEY = os.getenv("SECRET_KEY")
+        if not self.SECRET_KEY:
+            # In development, generate a temporary key; in production, fail
+            if os.getenv("ENVIRONMENT", "development").lower() == "production":
+                raise ValueError(
+                    "SECRET_KEY environment variable must be set in production. "
+                    "Generate a secure key with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+                )
+            # Development: generate temporary key
+            import secrets
+            self.SECRET_KEY = secrets.token_urlsafe(32)
+            import warnings
+            warnings.warn(
+                "SECRET_KEY not set. Using temporary development key. "
+                "Set ENVIRONMENT=production or provide SECRET_KEY for production use."
+            )
 
 
 # Global config instances

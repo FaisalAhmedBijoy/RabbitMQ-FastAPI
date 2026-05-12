@@ -8,8 +8,8 @@ from datetime import datetime
 from typing import Dict, Any
 
 from app.rabbitmq import get_rabbitmq_channel
-from app.config import RABBITMQ_CONFIG
-from app.utils.logger import setup_logger
+from app.core.config import RABBITMQ_CONFIG
+from app.shared.helpers.logger import setup_logger
 
 logger = setup_logger(__name__)
 

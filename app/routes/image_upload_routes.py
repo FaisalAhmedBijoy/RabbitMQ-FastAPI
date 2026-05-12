@@ -43,7 +43,7 @@ async def upload_image(request: ImageUploadRequest) -> ImageUploadResponse:
     """
     try:
         if request.image_id <= 0:
-            raise HTTPException(status_code=400, detail="image_id must be positive")
+            raise ValueError("image_id must be positive")
         
         # Generate processing ID
         processing_id = str(uuid.uuid4())
@@ -71,9 +71,12 @@ async def upload_image(request: ImageUploadRequest) -> ImageUploadResponse:
             processing_id=processing_id
         )
     
+    except ValueError as e:
+        logger.error(f"Validation error uploading image: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Error uploading image: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error uploading image: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 class StatusResponse(BaseModel):

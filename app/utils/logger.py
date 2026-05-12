@@ -6,7 +6,7 @@ import logging
 import sys
 from datetime import datetime
 
-from app.config import APP_CONFIG
+from app.core.config import APP_CONFIG
 
 
 def setup_logger(name: str) -> logging.Logger:

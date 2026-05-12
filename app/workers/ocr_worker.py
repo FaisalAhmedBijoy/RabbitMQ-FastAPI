@@ -6,8 +6,8 @@ import time
 import random
 from typing import Dict, Any
 
-from app.config import RABBITMQ_CONFIG, APP_CONFIG
-from app.utils.logger import setup_logger
+from app.core.config import RABBITMQ_CONFIG, APP_CONFIG
+from app.shared.helpers.logger import setup_logger
 from app.workers.base import BaseWorker
 
 logger = setup_logger(__name__)

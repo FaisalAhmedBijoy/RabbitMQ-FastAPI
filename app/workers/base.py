@@ -10,9 +10,9 @@ from abc import ABC, abstractmethod
 from typing import Callable, Dict, Any
 from datetime import datetime
 
-from app.rabbitmq import get_rabbitmq_channel
-from app.config import RABBITMQ_CONFIG, APP_CONFIG
-from app.utils.logger import setup_logger
+from app.core.rabbitmq import get_rabbitmq_channel
+from app.core.config import RABBITMQ_CONFIG, APP_CONFIG
+from app.shared.helpers.logger import setup_logger
 
 logger = setup_logger(__name__)
 
