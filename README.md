@@ -160,63 +160,180 @@ ACK  Retry Queue (with incremented count)
 ## Project Structure
 
 ```
-project/
+RabbitMQ-FastAPI/
 │
 ├── app/
 │   ├── __init__.py
-│   ├── config.py                 # Configuration management
-│   ├── main.py                   # FastAPI application
+│   ├── main.py                          # FastAPI application entry point
+│   ├── worker_launcher.py               # Launch all workers
+│   │
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py                    # Configuration management (DATABASE, RABBITMQ, SECURITY, APP)
+│   │   ├── constants.py                 # Application constants
+│   │   ├── database.py                  # Database connection setup
+│   │   ├── rabbitmq.py                  # RabbitMQ connection management
+│   │   └── security.py                  # Security utilities
 │   │
 │   ├── api/
 │   │   └── __init__.py
 │   │
-│   ├── rabbitmq/
+│   ├── routes/
 │   │   ├── __init__.py
-│   │   └── connection.py         # RabbitMQ connection management
+│   │   ├── image_upload_routes.py       # Image upload endpoints
+│   │   └── monitoring_routes.py         # Health check and monitoring
+│   │
+│   ├── rabbitmq/
+│   │   ├── __init__.py                  # Re-exports from core.rabbitmq (for backwards compatibility)
+│   │   └── connection.py                # Deprecated: use core.rabbitmq instead
+│   │
+│   ├── modules/                         # Feature modules
+│   │   ├── resize/
+│   │   │   ├── __init__.py
+│   │   │   ├── consumer.py              # RabbitMQ consumer setup
+│   │   │   ├── producer.py              # Message publishing
+│   │   │   ├── exchange.py              # Exchange declarations
+│   │   │   ├── queue.py                 # Queue declarations
+│   │   │   ├── worker.py                # Resize worker implementation
+│   │   │   ├── service.py               # Business logic
+│   │   │   ├── schemas.py               # Pydantic models
+│   │   │   └── utils.py                 # Utilities
+│   │   │
+│   │   ├── thumbnail/
+│   │   │   ├── __init__.py
+│   │   │   └── worker.py                # Thumbnail worker
+│   │   │
+│   │   ├── ocr/
+│   │   │   ├── __init__.py
+│   │   │   └── worker.py                # OCR worker
+│   │   │
+│   │   ├── ai_tagging/
+│   │   │   ├── __init__.py
+│   │   │   └── worker.py                # AI tagging worker
+│   │   │
+│   │   ├── retry/
+│   │   │   ├── __init__.py
+│   │   │   └── worker.py                # Retry handler
+│   │   │
+│   │   ├── dead_letter/
+│   │   │   ├── __init__.py
+│   │   │   └── worker.py                # Dead letter queue handler
+│   │   │
+│   │   ├── logging_system/
+│   │   │   ├── __init__.py
+│   │   │   └── worker.py                # Centralized logging
+│   │   │
+│   │   └── image_upload/
+│   │       ├── __init__.py
+│   │       ├── schemas.py               # Upload request/response models
+│   │       ├── service.py               # Upload service logic
+│   │       └── __init__.py
+│   │
+│   ├── shared/                          # Shared utilities and base classes
+│   │   ├── __init__.py
+│   │   ├── base/
+│   │   │   ├── __init__.py
+│   │   │   └── worker.py                # Base worker class
+│   │   ├── dependencies/
+│   │   │   └── __init__.py              # FastAPI dependencies
+│   │   ├── enums/
+│   │   │   └── __init__.py              # Enumerations
+│   │   ├── exceptions/
+│   │   │   ├── __init__.py
+│   │   │   └── custom.py                # Custom exceptions
+│   │   ├── helpers/
+│   │   │   ├── __init__.py
+│   │   │   └── logger.py                # Logging setup
+│   │   ├── middleware/
+│   │   │   └── __init__.py              # FastAPI middlewares
+│   │   └── validators/
+│   │       └── __init__.py              # Data validators
 │   │
 │   ├── producers/
-│   │   └── __init__.py           # Publish messages to queues
-│   │
-│   ├── workers/
 │   │   ├── __init__.py
-│   │   ├── base.py               # Base worker class
-│   │   ├── resize_worker.py      # Image resizing
-│   │   ├── thumbnail_worker.py   # Thumbnail generation
-│   │   ├── ocr_worker.py         # OCR processing
-│   │   └── ai_tagging_worker.py  # AI tagging
+│   │   └── producer.py                  # Message producer utilities
 │   │
 │   ├── queues/
-│   │   └── __init__.py           # Queue declarations
-│   │
-│   ├── exchanges/
-│   │   └── __init__.py
+│   │   └── __init__.py                  # Queue declarations
 │   │
 │   ├── schemas/
 │   │   ├── __init__.py
-│   │   └── image.py              # Pydantic models
+│   │   └── image.py                     # Pydantic models for images
 │   │
 │   ├── models/
-│   │   └── __init__.py
+│   │   └── __init__.py                  # Database models
 │   │
 │   ├── services/
-│   │   └── __init__.py
+│   │   └── __init__.py                  # Business logic services
+│   │
+│   ├── workers/                         # Legacy worker modules (for backwards compatibility)
+│   │   ├── __init__.py
+│   │   ├── base.py                      # Base worker class (moved to shared/base/worker.py)
+│   │   ├── resize_worker.py
+│   │   ├── thumbnail_worker.py
+│   │   ├── ocr_worker.py
+│   │   └── ai_tagging_worker.py
 │   │
 │   └── utils/
 │       ├── __init__.py
-│       └── logger.py             # Logging utility
+│       └── logger.py                    # Logging configuration
 │
-├── uploads/                      # Image storage
 ├── docker/
-│   ├── Dockerfile                # FastAPI Dockerfile
-│   └── Dockerfile.worker         # Worker Dockerfile
+│   ├── Dockerfile                       # FastAPI server image
+│   ├── Dockerfile.worker                # Worker base image
+│   └── fastapi/
+│       └── Dockerfile
 │
 ├── tests/
-│   └── __init__.py
+│   ├── __init__.py
+│   ├── conftest.py                      # Pytest configuration and fixtures
+│   ├── test_config.py                   # Configuration tests
+│   └── test_workers.py                  # Worker tests
 │
-├── docker-compose.yml            # Docker Compose configuration
-├── requirements.txt              # Python dependencies
-└── README.md                      # This file
+├── docs/
+│   ├── 00_START_HERE.md
+│   ├── API.md                           # API documentation
+│   ├── ARCHITECTURE.md                  # Detailed architecture docs
+│   ├── DEVELOPMENT.md                   # Development guide
+│   ├── PROJECT_CORRECTIONS.md           # Corrections applied
+│   └── [other documentation files]
+│
+├── docker-compose.yml                   # Docker Compose configuration
+├── docker-compose.override.yml          # Local development overrides
+├── requirements.txt                     # Python dependencies
+├── .env.example                         # Environment variables template
+├── Makefile                             # Build automation
+├── QUICKSTART.sh                        # Quick start script
+├── start.sh                             # Startup script
+├── test_api.sh                          # API testing script
+├── validate_setup.py                    # Setup validation
+└── README.md                            # This file
 ```
+
+### Key Files Explained
+
+**Core Configuration & Setup:**
+- `app/core/config.py` - Centralized configuration management for all services
+- `app/core/rabbitmq.py` - RabbitMQ connection and channel management
+- `docker-compose.yml` - Container orchestration
+
+**API Layer:**
+- `app/main.py` - FastAPI application setup and middleware
+- `app/routes/image_upload_routes.py` - Image upload and status endpoints
+- `app/routes/monitoring_routes.py` - Health checks and monitoring
+
+**Message Processing:**
+- `app/modules/**/worker.py` - Individual worker implementations
+- `app/shared/base/worker.py` - Base worker class with ACK/NACK logic
+- `app/worker_launcher.py` - Launch all workers in separate processes
+
+**Data Models & Validation:**
+- `app/schemas/image.py` - Request/response schemas
+- `app/modules/image_upload/schemas.py` - Image upload specific models
+
+**Utilities & Helpers:**
+- `app/shared/helpers/logger.py` - Centralized logging setup
+- `app/shared/exceptions/custom.py` - Custom exception classes
 
 ## Prerequisites
 
@@ -460,24 +577,77 @@ docker-compose logs --tail=100
 
 Edit `docker-compose.yml` or create `.env` file:
 
-```
+```env
+# RabbitMQ Configuration
 RABBITMQ_HOST=rabbitmq
 RABBITMQ_PORT=5672
 RABBITMQ_USER=guest
 RABBITMQ_PASSWORD=guest
 RABBITMQ_VHOST=/
+
+# FastAPI Configuration
+FASTAPI_HOST=0.0.0.0
+FASTAPI_PORT=8000
 DEBUG=True
 LOG_LEVEL=INFO
+ENVIRONMENT=development
+
+# Security
+SECRET_KEY=your-secret-key-here  # Set in production!
+
+# Database
+DATABASE_URL=sqlite:///./image_processing.db
+DB_ECHO=False
 ```
 
 ### RabbitMQ Configuration
 
-Modify in `app/config.py`:
+Modify in `app/core/config.py`:
 
 ```python
-PREFETCH_COUNT = 1           # Messages per worker
-MAX_RETRIES = 3              # Retry attempts
-RETRY_DELAY = 10000          # Milliseconds
+@dataclass
+class RabbitMQConfig:
+    PREFETCH_COUNT = 1           # Messages per worker
+    MAX_RETRIES = 3              # Retry attempts
+    RETRY_DELAY = 10000          # Milliseconds (10 seconds)
+    
+    # Queue names
+    RESIZE_QUEUE = "resize_queue"
+    THUMBNAIL_QUEUE = "thumbnail_queue"
+    OCR_QUEUE = "ocr_queue"
+    AI_TAGGING_QUEUE = "ai_tagging_queue"
+    RETRY_QUEUE = "retry_queue"
+    DEAD_LETTER_QUEUE = "dead_letter_queue"
+```
+
+### Application Configuration
+
+Key settings in `app/core/config.py`:
+
+```python
+@dataclass
+class AppConfig:
+    APP_NAME: str = "Async Image Processing Pipeline"
+    UPLOAD_DIR: str = "app/uploads"
+    MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
+    
+    # Processing timeouts (seconds)
+    RESIZE_TIMEOUT: int = 30
+    THUMBNAIL_TIMEOUT: int = 20
+    OCR_TIMEOUT: int = 60
+    AI_TAGGING_TIMEOUT: int = 45
+```
+
+### Security Configuration
+
+Important! Set a proper SECRET_KEY in production:
+
+```bash
+# Generate a secure key
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Set environment variable
+export SECRET_KEY="<generated-key>"
 ```
 
 ## Troubleshooting
