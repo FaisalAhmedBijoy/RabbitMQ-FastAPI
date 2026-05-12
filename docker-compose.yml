@@ -25,7 +25,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/fastapi/Dockerfile
     container_name: fastapi_api
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -50,7 +50,7 @@ services:
   resize_worker_1:
     build:
       context: .
-      dockerfile: docker/Dockerfile.worker
+      dockerfile: docker/workers/Dockerfile
     container_name: resize_worker_1
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -65,13 +65,13 @@ services:
       - ./app:/app/app
     networks:
       - image_processing_network
-    command: python -m app.workers.resize_worker
+    command: python app/modules/resize/worker.py
 
-  # Resize Worker 2 (for demonstrating competing consumers)
+  # Resize Worker 2 (competing consumer)
   resize_worker_2:
     build:
       context: .
-      dockerfile: docker/Dockerfile.worker
+      dockerfile: docker/workers/Dockerfile
     container_name: resize_worker_2
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -86,13 +86,13 @@ services:
       - ./app:/app/app
     networks:
       - image_processing_network
-    command: python -m app.workers.resize_worker
+    command: python app/modules/resize/worker.py
 
   # Thumbnail Worker
   thumbnail_worker:
     build:
       context: .
-      dockerfile: docker/Dockerfile.worker
+      dockerfile: docker/workers/Dockerfile
     container_name: thumbnail_worker
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -107,13 +107,13 @@ services:
       - ./app:/app/app
     networks:
       - image_processing_network
-    command: python -m app.workers.thumbnail_worker
+    command: python app/modules/thumbnail/worker.py
 
   # OCR Worker
   ocr_worker:
     build:
       context: .
-      dockerfile: docker/Dockerfile.worker
+      dockerfile: docker/workers/Dockerfile
     container_name: ocr_worker
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -128,13 +128,13 @@ services:
       - ./app:/app/app
     networks:
       - image_processing_network
-    command: python -m app.workers.ocr_worker
+    command: python app/modules/ocr/worker.py
 
   # AI Tagging Worker
   ai_tagging_worker:
     build:
       context: .
-      dockerfile: docker/Dockerfile.worker
+      dockerfile: docker/workers/Dockerfile
     container_name: ai_tagging_worker
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -149,7 +149,70 @@ services:
       - ./app:/app/app
     networks:
       - image_processing_network
-    command: python -m app.workers.ai_tagging_worker
+    command: python app/modules/ai_tagging/worker.py
+
+  # Retry Worker
+  retry_worker:
+    build:
+      context: .
+      dockerfile: docker/workers/Dockerfile
+    container_name: retry_worker
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      LOG_LEVEL: INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - image_processing_network
+    command: python app/modules/retry/worker.py
+
+  # Dead Letter Queue Worker
+  dlq_worker:
+    build:
+      context: .
+      dockerfile: docker/workers/Dockerfile
+    container_name: dlq_worker
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      LOG_LEVEL: INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - image_processing_network
+    command: python app/modules/dead_letter/worker.py
+
+  # Logging System Worker
+  logging_worker:
+    build:
+      context: .
+      dockerfile: docker/workers/Dockerfile
+    container_name: logging_worker
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      LOG_LEVEL: INFO
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    networks:
+      - image_processing_network
+    command: python app/modules/logging_system/worker.py
 
 networks:
   image_processing_network:
